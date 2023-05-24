@@ -1,5 +1,7 @@
 require('dotenv').config()
 const {Client, IntentsBitField} = require('discord.js')
+const db = require('./database/connection')
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
 const client = new Client({
     intents: [
@@ -10,17 +12,46 @@ const client = new Client({
     ],
 })
 
-client.on('ready', (c) => {
-    console.log(`✅ ${c.user.username} is online`);
-})
+const sadWords = ["sad", "depressed", "unhappy", "angry", "miserable"]
+const encouragements = [
+    "Cheer up!",
+    "Hang in there.",
+    "You are a great person!"
+]
+const getQuote = async () => {
+    const res = await fetch("https://zenquotes.io/api/random");
+    const data = await res.json();
+    return data[0]["q"] + " -" + data[0]["a"];
+}
+
+db.connect()
+    .then(() => {
+        console.log('database connected')
+        client.on('ready', (c) => {
+            console.log(`✅ ${c.user.username} is online`);
+        })
+    })
+    .catch((err) => {
+        console.log(err)
+    })
+
 
 client.on('messageCreate', (message) => {
     if (message.author.bot) {
         return
     }
 
-    if (message.content === 'hello') { 
-        message.reply('hello')
+    if (message.content === '!!test') { 
+        message.reply('masuk!')
+    }
+
+    if (message.content === "$inspire") {
+        getQuote().then(quote => message.channel.send(quote))
+    }
+
+    if (sadWords.some(word => message.content.includes(word))) {
+        const encouragement = encouragements[Math.floor(Math.random() * encouragements.length)]
+        message.reply(encouragement)
     }
 })
 
