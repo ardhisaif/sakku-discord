@@ -1,70 +1,25 @@
-require('dotenv').config()
-const {Client, IntentsBitField} = require('discord.js')
-const db = require('./database/connection')
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
-
+require("dotenv").config();
+require("./database/connection");
+const controllers = require("./controllers/index")
+const migrate = require("./database/migration")
+const register = require("./command/register")
+const { Client, IntentsBitField } = require("discord.js");
 const client = new Client({
-    intents: [
-        IntentsBitField.Flags.Guilds,
-        IntentsBitField.Flags.GuildMembers,
-        IntentsBitField.Flags.GuildMessages,
-        IntentsBitField.Flags.MessageContent,
-    ],
-})
+  intents: [
+    IntentsBitField.Flags.Guilds,
+    IntentsBitField.Flags.GuildMembers,
+    IntentsBitField.Flags.GuildMessages,
+    IntentsBitField.Flags.MessageContent,
+  ],
+});
 
-const sadWords = ["sad", "depressed", "unhappy", "angry", "miserable"]
-const encouragements = [
-    "Cheer up!",
-    "Hang in there.",
-    "You are a great person!"
-]
-const getQuote = async () => {
-    const res = await fetch("https://zenquotes.io/api/random");
-    const data = await res.json();
-    return data[0]["q"] + " -" + data[0]["a"];
-}
+client.on("ready", (c) => {
+  console.log(`✅ ${c.user.username} is online`);
+});
 
-db.connect()
-    .then(() => {
-        console.log('database connected')
-        client.on('ready', (c) => {
-            console.log(`✅ ${c.user.username} is online`);
-        })
-    })
-    .catch((err) => {
-        console.log(err)
-    })
-
-
-client.on('messageCreate', (message) => {
-    if (message.author.bot) {
-        return
-    }
-
-    if (message.content === '!!test') { 
-        message.reply('masuk!')
-    }
-
-    if (message.content === "$inspire") {
-        getQuote().then(quote => message.channel.send(quote))
-    }
-
-    if (sadWords.some(word => message.content.includes(word))) {
-        const encouragement = encouragements[Math.floor(Math.random() * encouragements.length)]
-        message.reply(encouragement)
-    }
-})
-
-client.on('interactionCreate', (interaction) => {
-    if(!interaction.isChatInputCommand()) return
-
-    if(interaction.commandName === 'hey') {
-        interaction.reply("hey!")
-    }
-    
-    if(interaction.commandName === 'ping') {
-        interaction.reply("pong!!")
-    }
-})
+client.on("messageCreate", (message) => controllers.execute(message));
+client.on("interactionCreate", (interaction) => migrate.up(interaction));
+client.on("interactionCreate", (interaction) => migrate.down(interaction));
+client.on("interactionCreate", (interaction) => register.user(interaction));
 
 client.login(process.env.TOKEN);
