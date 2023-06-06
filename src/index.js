@@ -20,6 +20,6 @@ client.on("ready", (c) => {
 client.on("messageCreate", (message) => controllers.execute(message));
 client.on("interactionCreate", (interaction) => migrate.up(interaction));
 client.on("interactionCreate", (interaction) => migrate.down(interaction));
-client.on("interactionCreate", (interaction) => register.user(interaction));
+client.on("interactionCreate", (interaction) => register.user(interaction, client));
 
 client.login(process.env.TOKEN);
